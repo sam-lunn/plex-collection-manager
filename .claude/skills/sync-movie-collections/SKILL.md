@@ -8,8 +8,8 @@ description: Regroups the Plex movie library into franchise/series collections (
 Syncs Plex collections in the "Films" library to match film franchises,
 using `plex-collection-manager` (the plexapi CLI at
 `src/plex_collection_manager/plex_tool.py` — the only thing that talks to
-Plex) and `plex-sync-logic` (pure local diff/planning logic at
-`src/plex_collection_manager/sync_logic.py`).
+Plex) and `plex-movie-sync-logic` (pure local diff/planning logic at
+`src/plex_collection_manager/movie_sync_logic.py`).
 
 Run all `uv run` commands below from the project root
 (`/Users/samlunn/Code/Plex/plex-collection-manager`) with the environment
@@ -31,7 +31,7 @@ dir and an empty `{}` file if it doesn't exist yet — do not delete or reset
 an existing cache).
 
 ```bash
-uv run plex-sync-logic unclassified /tmp/plex-sync/movies.json data/franchise_cache.json
+uv run plex-movie-sync-logic unclassified /tmp/plex-sync/movies.json data/franchise_cache.json
 ```
 
 This returns `{"unclassified": [...], "known_franchises": [...]}`. If
@@ -56,7 +56,7 @@ For each batch:
    interrupted):
 
    ```bash
-   uv run plex-sync-logic merge-cache data/franchise_cache.json /tmp/plex-sync/batch-N.json
+   uv run plex-movie-sync-logic merge-cache data/franchise_cache.json /tmp/plex-sync/batch-N.json
    ```
 4. Update your running known-franchise-name list from this batch's new
    franchise values before starting the next batch.
@@ -64,7 +64,7 @@ For each batch:
 ## 4. Compute the plan
 
 ```bash
-uv run plex-sync-logic plan /tmp/plex-sync/movies.json /tmp/plex-sync/collections.json data/franchise_cache.json > /tmp/plex-sync/plan.json
+uv run plex-movie-sync-logic plan /tmp/plex-sync/movies.json /tmp/plex-sync/collections.json data/franchise_cache.json > /tmp/plex-sync/plan.json
 ```
 
 This produces `{"creates": [...], "adds": [...], "removes": [...], "deletes": [...]}`:

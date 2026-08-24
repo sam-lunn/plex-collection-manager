@@ -1,10 +1,11 @@
 """Thin CLI wrapper around plexapi.
 
 This is the only code in the project allowed to talk to the Plex server.
-It exposes read-only listing of movies/collections, plus exactly five
-mutating operations: create/edit/delete collection and add/remove a
-movie from a collection. Nothing else (no movie metadata edits, no
-deletes of media, no touching other libraries).
+It exposes read-only listing of movies/shows/collections, plus exactly
+five mutating operations: create/edit/delete collection and add/remove an
+item from a collection. Nothing else (no metadata edits, no deletes of
+media, no touching libraries other than the configured movie and TV
+sections).
 
 All commands print JSON to stdout on success and a JSON error object to
 stderr with a non-zero exit code on failure.
@@ -33,12 +34,28 @@ def _section(server: PlexServer):
     return server.library.section(library_name)
 
 
+def _tv_section(server: PlexServer):
+    library_name = os.environ.get("PLEX_TV_LIBRARY_NAME", "TV Programmes")
+    return server.library.section(library_name)
+
+
 def _movie_json(movie) -> dict:
     return {
         "key": movie.ratingKey,
         "title": movie.title,
         "year": movie.year,
         "guid": movie.guid,
+    }
+
+
+def _show_json(show) -> dict:
+    return {
+        "key": show.ratingKey,
+        "title": show.title,
+        "year": show.year,
+        "guid": show.guid,
+        "originallyAvailableAt": str(show.originallyAvailableAt) if show.originallyAvailableAt else None,
+        "leafCount": show.leafCount,
     }
 
 
@@ -62,6 +79,18 @@ def cmd_movies(args: argparse.Namespace) -> dict:
 def cmd_collections(args: argparse.Namespace) -> dict:
     server = _server()
     section = _section(server)
+    return {"collections": [_collection_json(c) for c in section.collections()]}
+
+
+def cmd_shows(args: argparse.Namespace) -> dict:
+    server = _server()
+    section = _tv_section(server)
+    return {"shows": [_show_json(s) for s in section.all()]}
+
+
+def cmd_tv_collections(args: argparse.Namespace) -> dict:
+    server = _server()
+    section = _tv_section(server)
     return {"collections": [_collection_json(c) for c in section.collections()]}
 
 
@@ -117,6 +146,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("movies", help="List all movies in the library").set_defaults(func=cmd_movies)
     sub.add_parser("collections", help="List all collections in the library").set_defaults(func=cmd_collections)
+    sub.add_parser("shows", help="List all shows in the TV library").set_defaults(func=cmd_shows)
+    sub.add_parser("tv-collections", help="List all collections in the TV library").set_defaults(func=cmd_tv_collections)
 
     p = sub.add_parser("create-collection", help="Create a collection from a list of movie keys")
     p.add_argument("--title", required=True)

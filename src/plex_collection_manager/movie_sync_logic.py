@@ -112,7 +112,7 @@ def cmd_plan(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="sync-logic")
+    parser = argparse.ArgumentParser(prog="movie-sync-logic")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("unclassified", help="List movies not yet in the franchise cache")

@@ -12,7 +12,8 @@ dependencies = [
 
 [project.scripts]
 plex-collection-manager = "plex_collection_manager.plex_tool:main"
-plex-sync-logic = "plex_collection_manager.sync_logic:main"
+plex-movie-sync-logic = "plex_collection_manager.movie_sync_logic:main"
+plex-tv-sync-logic = "plex_collection_manager.tv_sync_logic:main"
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
