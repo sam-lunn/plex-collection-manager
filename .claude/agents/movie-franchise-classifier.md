@@ -1,6 +1,6 @@
 ---
-name: franchise-classifier
-description: Given a batch of movie titles/years and a list of already-known canonical franchise names, clusters the movies by film series/franchise (e.g. "Marvel Cinematic Universe", "James Bond", "Back to the Future"). Used by the /sync-collections skill to classify newly-seen movies before grouping them into Plex collections. Returns strict JSON only.
+name: movie-franchise-classifier
+description: Given a batch of movie titles/years and a list of already-known canonical franchise names, clusters the movies by film series/franchise (e.g. "Marvel Cinematic Universe", "James Bond", "Back to the Future"). Used by the /sync-movie-collections skill to classify newly-seen movies before grouping them into Plex collections. Returns strict JSON only.
 tools: WebSearch, Read
 model: inherit
 ---

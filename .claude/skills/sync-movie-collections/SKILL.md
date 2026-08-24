@@ -1,9 +1,9 @@
 ---
-name: sync-collections
-description: Regroups the Plex movie library into franchise/series collections (3+ owned entries), and deletes any collection left with only one item, anywhere in the library. Use when the user asks to sync, refresh, or clean up their Plex collections, or runs /sync-collections.
+name: sync-movie-collections
+description: Regroups the Plex movie library into franchise/series collections (3+ owned entries), and deletes any collection left with only one item, anywhere in the library. Use when the user asks to sync, refresh, or clean up their Plex movie collections, or runs /sync-movie-collections.
 ---
 
-# /sync-collections
+# /sync-movie-collections
 
 Syncs Plex collections in the "Films" library to match film franchises,
 using `plex-collection-manager` (the plexapi CLI at
@@ -47,7 +47,7 @@ between batches.
 
 For each batch:
 
-1. Launch the `franchise-classifier` subagent (via the `Agent` tool) with the
+1. Launch the `movie-franchise-classifier` subagent (via the `Agent` tool) with the
    batch's movies and the current known-franchise-name list (merge in any
    new names produced by prior batches this run) in the prompt. Ask it to
    return the JSON array described in its own instructions — nothing else.
@@ -124,5 +124,5 @@ are now cached/classified in total for next time.
 - Running with no library changes should produce an empty plan (all four
   lists empty) — this is the expected idempotent result, not a bug.
 - If the user wants this to run automatically on a schedule, point them at
-  the `schedule` skill to register `/sync-collections` on a cadence of their
-  choosing — don't set up a schedule unprompted.
+  the `schedule` skill to register `/sync-movie-collections` on a cadence of
+  their choosing — don't set up a schedule unprompted.

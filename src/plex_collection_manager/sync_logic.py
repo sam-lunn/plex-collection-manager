@@ -1,4 +1,4 @@
-"""Pure local helper logic for /sync-collections. No Plex calls here -
+"""Pure local helper logic for /sync-movie-collections. No Plex calls here -
 this only reads/writes local JSON files (the movie/collection snapshots
 already fetched via plex_tool.py, and the franchise cache) and computes
 what to do. Keeping this separate from plex_tool.py keeps the Plex-facing
