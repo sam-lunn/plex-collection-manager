@@ -97,17 +97,39 @@ uv run plex-movie-completeness-logic report /tmp/plex-completeness/collections.j
 
 This produces `{"incomplete": [...], "complete_count": <int>}`. Each
 `incomplete` entry is `{"collection_key", "collection", "owned_count",
-"missing": [{"title", "year", "released"}], "note", "checked_at"}`.
+"missing": [{"title", "year", "released", "review"?}], "note", "checked_at"}`.
+
+The diff (in `_missing_for_collection`) matches each canonical entry to an
+owned item by punctuation-normalized title, disambiguated by year when a
+title repeats (a remake reusing its original's exact title, e.g. "Cinderella"
+1950 and 2015), then falls back to matching by year alone for entries that
+still don't match, but only when the year is unique on both sides (catches
+Plex-side alternate titles/spellings like "Fast & Furious 7" vs. the
+official "Furious 7", without risking a coincidental year collision pairing
+up two different films). This was tightened twice after the user caught real
+false positives in testing — see `cache/franchise_completeness_cache.json`'s
+git history / the project's saved memory on this if you need the detail.
+
+A `missing` entry carries an optional `"review"` field — a list of reasons
+it's still worth a second look even though the diff couldn't resolve it
+automatically. Currently the only reason generated is an exact-title match
+to something already owned under a different year (a remake/reboot the
+diff's year-disambiguation should have already separated correctly, so a
+review flag here means the two entries' years didn't line up the way
+expected and it's worth confirming against Plex directly).
 
 ## 5. Report to the user
 
 List each incomplete collection with what's missing — separate released
 films (things they could actually go add) from announced/upcoming ones
-(`"released": false`) so the two don't read as the same kind of gap.
-Mention the total count of fully-complete collections too. If any
-collections were skipped this run due to a WebSearch budget shortfall
-(step 3), call those out separately as unverified rather than silently
-omitting them.
+(`"released": false`) so the two don't read as the same kind of gap. Call
+out any entry carrying a `"review"` field separately as "worth double-
+checking against Plex" rather than blending it into the confident list —
+don't silently drop the flag, and don't treat it as disqualifying either;
+just surface it so the user can verify. Mention the total count of
+fully-complete collections too. If any collections were skipped this run
+due to a WebSearch budget shortfall (step 3), call those out separately as
+unverified rather than silently omitting them.
 
 ## Notes for re-runs
 

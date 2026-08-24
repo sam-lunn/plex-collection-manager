@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import html
 import json
+import re
 import sys
 
 
@@ -25,26 +27,37 @@ def save(path: str, data: dict) -> None:
 
 
 def _norm_title(title: str) -> str:
-    return title.strip().lower()
+    # Plex titles and researched canonical titles routinely differ only in
+    # punctuation style (an em dash vs "--" vs "-", a colon before a
+    # subtitle, a trailing period) - normalize those away so real matches
+    # aren't reported as missing just because of formatting.
+    t = title.strip().lower()
+    t = re.sub(r"[-‐‑‒–—―]+", " ", t)  # hyphen/dash variants
+    t = re.sub(r"[:,.!]+", "", t)
+    t = re.sub(r"\s+", " ", t).strip()
+    return t
 
 
 def cmd_to_check(args: argparse.Namespace) -> None:
     collections = load(args.collections)["collections"]
     franchise_cache = load(args.franchise_cache)
-    known_franchises = {v["franchise"] for v in franchise_cache.values() if v.get("franchise")}
+    known_franchises = {
+        _norm_title(v["franchise"]) for v in franchise_cache.values() if v.get("franchise")
+    }
 
     try:
         completeness_cache = load(args.cache)
     except FileNotFoundError:
         completeness_cache = {}
+    checked_titles = {_norm_title(t) for t in completeness_cache}
 
     to_check = []
     skipped_non_franchise = []
     for c in collections:
-        if c["title"] not in known_franchises:
+        if _norm_title(c["title"]) not in known_franchises:
             skipped_non_franchise.append(c["title"])
             continue
-        if c["title"] in completeness_cache:
+        if _norm_title(c["title"]) in checked_titles:
             continue
         to_check.append({
             "collection_key": c["key"],
@@ -67,32 +80,122 @@ def cmd_merge_cache(args: argparse.Namespace) -> None:
     entries = batch if isinstance(batch, list) else batch["checked"]
     today = datetime.date.today().isoformat()
     for entry in entries:
-        cache[entry["collection"]] = {
-            "canonical": entry.get("canonical", []),
-            "note": entry.get("note", ""),
+        canonical = [
+            {**m, "title": html.unescape(m["title"])}
+            for m in entry.get("canonical", [])
+        ]
+        cache[html.unescape(entry["collection"])] = {
+            "canonical": canonical,
+            "note": html.unescape(entry.get("note", "")),
             "checked_at": today,
         }
     save(args.cache, cache)
     print(json.dumps({"cache_size": len(cache)}, indent=2))
 
 
+def _missing_for_collection(canonical: list, owned_items: list) -> list:
+    # Match each canonical entry to an owned item in two passes, consuming
+    # owned items as they're matched so the same physical file can't satisfy
+    # two different canonical entries.
+    #
+    # Pass 1 - title, disambiguated by year when the title repeats. A plain
+    # "is this title anywhere in owned" check is unsafe: a franchise can
+    # reuse the exact same title for a remake (e.g. "Cinderella" 1950 and
+    # 2015, "Mulan" 1998 and 2020) - if only the original is owned, a
+    # title-only check would wrongly treat the remake as owned too. So
+    # within a group of canonical entries sharing a normalized title, each
+    # is only matched to an owned item of the same normalized title AND the
+    # same year. Titles that aren't duplicated within this collection are
+    # matched on title alone, regardless of year, since there's no other
+    # candidate they could be confused with.
+    owned_pool = list(owned_items)
+    canon_title_counts: dict = {}
+    for m in canonical:
+        t = _norm_title(m["title"])
+        canon_title_counts[t] = canon_title_counts.get(t, 0) + 1
+
+    unmatched_canonical = []
+    for m in canonical:
+        t = _norm_title(m["title"])
+        duplicated = canon_title_counts.get(t, 0) > 1
+        match_idx = None
+        for idx, i in enumerate(owned_pool):
+            if _norm_title(i["title"]) != t:
+                continue
+            if duplicated and i.get("year") != m.get("year"):
+                continue
+            match_idx = idx
+            break
+        if match_idx is not None:
+            owned_pool.pop(match_idx)
+        else:
+            unmatched_canonical.append(m)
+
+    # Pass 2 - year fallback, for titles that never matched at all (an
+    # alternate/regional Plex title - "Fast & Furious 7" vs the researched
+    # "Furious 7", "A Simple Favour" vs "A Simple Favor"). Only applied when
+    # the year uniquely identifies one film on each remaining side, so it
+    # can't silently pair up two different films that merely share a year.
+    owned_year_counts: dict = {}
+    for i in owned_pool:
+        owned_year_counts[i.get("year")] = owned_year_counts.get(i.get("year"), 0) + 1
+    canon_year_counts: dict = {}
+    for m in unmatched_canonical:
+        canon_year_counts[m.get("year")] = canon_year_counts.get(m.get("year"), 0) + 1
+
+    still_missing = []
+    for m in unmatched_canonical:
+        year = m.get("year")
+        if year is not None and owned_year_counts.get(year, 0) == 1 and canon_year_counts.get(year, 0) == 1:
+            continue
+        still_missing.append(m)
+    return still_missing
+
+
+def _flag_for_review(missing: list, owned_items: list) -> list:
+    # A "missing" verdict is only as good as the title match that produced
+    # it. This flags exactly the one failure mode confirmed by testing:
+    # a remake/reboot sharing its original's exact (normalized) title under
+    # a different year - e.g. canonical "Cinderella" 2015 reported missing
+    # while "Cinderella" 1950 is owned. That pairing is real signal a human
+    # should double-check, not noise.
+    #
+    # A broader "does this title's wording resemble anything owned" check
+    # was tried and rejected: nearly every sequel trivially shares wording
+    # with its own base film ("Avatar 4" vs owned "Avatar"), so it flagged
+    # the large majority of genuinely-missing entries and buried the one
+    # signal worth surfacing. Precision beats recall for a review flag -
+    # a flag nobody trusts because it fires constantly is worse than none.
+    owned_by_norm_title: dict = {}
+    for i in owned_items:
+        owned_by_norm_title.setdefault(_norm_title(i["title"]), []).append(i.get("year"))
+
+    flagged = []
+    for m in missing:
+        years = owned_by_norm_title.get(_norm_title(m["title"]))
+        if years:
+            review = [f'exact same title already owned, from {y} - likely a remake/reboot year mismatch' for y in years]
+            flagged.append({**m, "review": review})
+        else:
+            flagged.append(m)
+    return flagged
+
+
 def cmd_report(args: argparse.Namespace) -> None:
     collections = load(args.collections)["collections"]
     cache = load(args.cache)
-    by_title = {c["title"]: c for c in collections}
+    by_title = {_norm_title(c["title"]): c for c in collections}
 
     incomplete = []
     complete = 0
     for title, entry in sorted(cache.items()):
-        collection = by_title.get(title)
+        collection = by_title.get(_norm_title(title))
         if collection is None:
             # Collection no longer exists in Plex (renamed/deleted) - nothing to report.
             continue
-        owned_titles = {_norm_title(i["title"]) for i in collection["items"]}
-        missing = [
-            m for m in entry.get("canonical", [])
-            if _norm_title(m["title"]) not in owned_titles
-        ]
+        canonical = entry.get("canonical", [])
+        missing = _missing_for_collection(canonical, collection["items"])
+        missing = _flag_for_review(missing, collection["items"])
         if missing:
             incomplete.append({
                 "collection_key": collection["key"],
