@@ -91,6 +91,17 @@ plan (there's no delete step — this feature only ever touches its own 4
 collections and never removes a collection), and applies it after you
 confirm.
 
+Cancellation/renewal status and finale reception are exactly the kind of
+facts that go stale in a model's training data, so the classifier is
+required to confirm every show with WebSearch rather than trust its own
+memory — if WebSearch isn't available in a session, it refuses to
+classify from memory and says so instead. In a shared WebSearch budget
+(e.g. several subagent batches in one session), a batch can still run out
+of search quota partway through; any show judged from memory in that
+situation gets flagged and recorded in `cache/tv_status_lowconfidence.json`
+so it can be re-checked later with a fresh budget, rather than being
+silently treated as equally trustworthy as a search-verified result.
+
 ### From the command line
 
 Same headless pattern as the movie sync:

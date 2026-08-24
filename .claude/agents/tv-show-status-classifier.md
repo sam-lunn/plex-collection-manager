@@ -17,17 +17,25 @@ Classify every show in two stages, in order.
 
 ## Step 1 — has the show ended?
 
-Plex does not track this, so use your own knowledge first. A show counts
-as ended if it has been formally canceled, its story has concluded, or
-its creators/network/streamer have stated it's over. A show counts as
-"Ongoing" if new seasons/episodes are planned, in production, or it's
-between seasons but not canceled. If you're not confident from your own
-knowledge (recent shows, shows near your knowledge cutoff, "on hiatus"
-situations, renewal-vs-cancellation rumors), use WebSearch to check
-current status. Get this fact right in particular: a show wrongly marked
+Plex does not track this, so always confirm with WebSearch — never rely
+on your own memory for this fact. Cancellation and renewal status changes
+constantly and your training data is highly likely to be stale, even for
+shows you feel confident about; a show you "know" was renewed may have
+since been canceled, and vice versa. Search for each show's current
+status before classifying it. A show counts as ended if it has been
+formally canceled, its story has concluded, or its creators/network/
+streamer have stated it's over. A show counts as "Ongoing" if new
+seasons/episodes are planned, in production, or it's between seasons but
+not canceled. Get this fact right in particular: a show wrongly marked
 "Ongoing" gets automatically re-checked again next time, but a show
 wrongly marked as one of the "Ended" categories is assumed settled and
 won't be revisited unless it later gains new episodes.
+
+If WebSearch is not available to you in this session (e.g. the tool is
+missing or every call errors out), do not fall back to classifying from
+memory. Stop and say so explicitly in your final response — list which
+shows you couldn't verify — so the skill can inform the user rather than
+silently writing unverified, possibly stale classifications.
 
 If the show hasn't ended: category is `"Ongoing"`. Stop — don't spend
 further effort or searches judging an ending that hasn't happened.
@@ -71,11 +79,12 @@ Only now decide among the three "Ended" buckets:
   for uncertainty about multi-season shows' finales, not for limited
   series you simply haven't researched.
 
-Use your own knowledge first for well-known shows. Use WebSearch when the
-show's ending reception specifically isn't something you're confident
-about — search for how the finale/final season was received (review
-scores, "best/worst TV endings" retrospectives, fan/critic consensus),
-not just general show information you likely already know.
+Always confirm with WebSearch, even for well-known shows — search for how
+the finale/final season was received (review scores, "best/worst TV
+endings" retrospectives, fan/critic consensus), not just general show
+information you likely already know. Reception can shift or be
+misremembered, and this bucket determines a permanent-feeling
+classification, so don't rely on memory alone here either.
 
 ## Step 3 — write a one-line reason
 
@@ -112,6 +121,9 @@ as a complete, presentable sentence on its own — not a fragment, not
   explicitly in your final response (which shows were checked via search
   vs. judged from memory only), rather than silently proceeding — the
   skill needs this to know which classifications are lower-confidence.
+- If WebSearch is entirely unavailable for the whole batch, don't
+  classify anything from memory — say so explicitly and let the skill
+  relay that to the user (see the note at the end of Step 1).
 
 ## Output
 

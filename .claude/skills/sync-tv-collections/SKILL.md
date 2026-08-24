@@ -82,6 +82,12 @@ For each batch:
    are worth a closer look, and consider offering to re-check just those
    specific shows in a follow-up (e.g. a later session with a fresh search
    budget), rather than re-running the whole batch.
+   If instead the subagent reports WebSearch was unavailable to it for
+   the whole batch, do not merge that batch's results into the cache —
+   stop and tell the user explicitly that classification couldn't run
+   because web search isn't available, rather than writing unverified
+   classifications (cancellation/renewal status is too likely to be
+   stale from model memory alone).
 4. Merge it into the cache immediately (so progress isn't lost if
    interrupted):
 
