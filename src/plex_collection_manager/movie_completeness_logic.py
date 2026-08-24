@@ -152,35 +152,6 @@ def _missing_for_collection(canonical: list, owned_items: list) -> list:
     return still_missing
 
 
-def _flag_for_review(missing: list, owned_items: list) -> list:
-    # A "missing" verdict is only as good as the title match that produced
-    # it. This flags exactly the one failure mode confirmed by testing:
-    # a remake/reboot sharing its original's exact (normalized) title under
-    # a different year - e.g. canonical "Cinderella" 2015 reported missing
-    # while "Cinderella" 1950 is owned. That pairing is real signal a human
-    # should double-check, not noise.
-    #
-    # A broader "does this title's wording resemble anything owned" check
-    # was tried and rejected: nearly every sequel trivially shares wording
-    # with its own base film ("Avatar 4" vs owned "Avatar"), so it flagged
-    # the large majority of genuinely-missing entries and buried the one
-    # signal worth surfacing. Precision beats recall for a review flag -
-    # a flag nobody trusts because it fires constantly is worse than none.
-    owned_by_norm_title: dict = {}
-    for i in owned_items:
-        owned_by_norm_title.setdefault(_norm_title(i["title"]), []).append(i.get("year"))
-
-    flagged = []
-    for m in missing:
-        years = owned_by_norm_title.get(_norm_title(m["title"]))
-        if years:
-            review = [f'exact same title already owned, from {y} - likely a remake/reboot year mismatch' for y in years]
-            flagged.append({**m, "review": review})
-        else:
-            flagged.append(m)
-    return flagged
-
-
 def cmd_report(args: argparse.Namespace) -> None:
     collections = load(args.collections)["collections"]
     cache = load(args.cache)
@@ -195,7 +166,6 @@ def cmd_report(args: argparse.Namespace) -> None:
             continue
         canonical = entry.get("canonical", [])
         missing = _missing_for_collection(canonical, collection["items"])
-        missing = _flag_for_review(missing, collection["items"])
         if missing:
             incomplete.append({
                 "collection_key": collection["key"],
