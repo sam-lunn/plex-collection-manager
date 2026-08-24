@@ -1,10 +1,13 @@
 # plex-collection-manager
 
-Two Claude Code-driven Plex collection managers:
+Three Claude Code-driven Plex collection tools:
 
 - **Movies**: groups your movie library into collections by film
   franchise/series (2+ owned entries), and removes any collection left
   with only one item. Only ever touches the movie library section.
+- **Movie collection completeness**: checks every franchise collection
+  against its full canonical filmography and reports which films you're
+  missing from each. Read-only — never touches Plex beyond listing.
 - **TV shows**: sorts every show in your TV library into exactly 4 fixed
   collections — Ongoing, Ended Poorly, Ended Okay, Ended Well — based on
   whether it's ended and how well its ending was received. Only ever
@@ -75,6 +78,50 @@ Follow its prompts to create a routine that runs `/sync-movie-collections` on
 whatever cadence you want (e.g. `claude -p "/sync-movie-collections"` on a
 weekly cron). It's not scheduled by default — this has to be set up
 explicitly.
+
+## Incomplete movie collections
+
+### Interactively
+
+In Claude Code, run `/find-incomplete-collections`. See
+`.claude/skills/find-incomplete-collections/SKILL.md` for what it does: it
+snapshots your movie collections, looks up the full canonical filmography
+for any franchise collection it hasn't checked before (using the
+`movie-collection-completeness-checker` subagent — model knowledge + web
+search, cached in `cache/franchise_completeness_cache.json` so repeat runs
+only research new franchise collections), then reports which owned
+collections are missing films — separating ones you could add right now
+from announced-but-unreleased entries. It's read-only: it never creates,
+edits, or deletes anything in Plex.
+
+Only collections whose title matches a known franchise name in
+`cache/franchise_cache.json` (i.e. ones `/sync-movie-collections` would
+recognize) are checked, since a meaningful "complete/incomplete" verdict
+needs a well-defined canonical membership.
+
+### From the command line
+
+```bash
+cd /path/to/plex-collection-manager
+claude -p "/find-incomplete-collections"
+```
+
+The Plex-facing CLI and the pure local diff logic
+(`plex-movie-completeness-logic`) can also be run directly, without any AI
+step, for manual inspection or scripting — though on their own they don't
+know a franchise's full filmography:
+
+```bash
+uv run plex-collection-manager movie-collections
+uv run plex-movie-completeness-logic to-check collections.json cache/franchise_cache.json cache/franchise_completeness_cache.json
+uv run plex-movie-completeness-logic report collections.json cache/franchise_completeness_cache.json
+```
+
+### Scheduling
+
+Same as the other two — use `/schedule` to register
+`/find-incomplete-collections` on whatever cadence you want. Not scheduled
+by default.
 
 ## TV show status collections
 
