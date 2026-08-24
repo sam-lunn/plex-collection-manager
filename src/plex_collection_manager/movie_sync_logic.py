@@ -64,7 +64,7 @@ def cmd_plan(args: argparse.Namespace) -> None:
         entry = cache.get(str(m["key"]))
         if entry and entry.get("franchise"):
             desired.setdefault(entry["franchise"], set()).add(m["key"])
-    desired = {name: keys for name, keys in desired.items() if len(keys) >= 3}
+    desired = {name: keys for name, keys in desired.items() if len(keys) >= 2}
 
     by_title = {c["title"].strip().lower(): c for c in collections}
     matched_collection_keys: set[int] = set()

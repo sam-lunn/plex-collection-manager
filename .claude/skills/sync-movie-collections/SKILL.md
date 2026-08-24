@@ -1,6 +1,6 @@
 ---
 name: sync-movie-collections
-description: Regroups the Plex movie library into franchise/series collections (3+ owned entries), and deletes any collection left with only one item, anywhere in the library. Use when the user asks to sync, refresh, or clean up their Plex movie collections, or runs /sync-movie-collections.
+description: Regroups the Plex movie library into franchise/series collections (2+ owned entries), and deletes any collection left with only one item, anywhere in the library. Use when the user asks to sync, refresh, or clean up their Plex movie collections, or runs /sync-movie-collections.
 ---
 
 # /sync-movie-collections
@@ -70,7 +70,7 @@ uv run plex-movie-sync-logic plan /tmp/plex-sync/movies.json /tmp/plex-sync/coll
 This produces `{"creates": [...], "adds": [...], "removes": [...], "deletes": [...]}`:
 
 - `creates` — new franchise collections to make (title + full member list; a
-  franchise only appears here once the library owns 3+ of its films).
+  franchise only appears here once the library owns 2+ of its films).
 - `adds` — movies to add to an existing collection that already matches a
   franchise name.
 - `removes` — movies to remove from an existing franchise-matched collection

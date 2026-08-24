@@ -3,7 +3,7 @@
 Two Claude Code-driven Plex collection managers:
 
 - **Movies**: groups your movie library into collections by film
-  franchise/series (3+ owned entries), and removes any collection left
+  franchise/series (2+ owned entries), and removes any collection left
   with only one item. Only ever touches the movie library section.
 - **TV shows**: sorts every show in your TV library into exactly 4 fixed
   collections — Ongoing, Ended Poorly, Ended Okay, Ended Well — based on
