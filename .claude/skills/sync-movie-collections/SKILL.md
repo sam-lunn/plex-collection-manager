@@ -21,17 +21,17 @@ Use a scratch directory for the intermediate JSON files, e.g.
 
 ```bash
 uv run plex-collection-manager movies > /tmp/plex-sync/movies.json
-uv run plex-collection-manager collections > /tmp/plex-sync/collections.json
+uv run plex-collection-manager movie-collections > /tmp/plex-sync/collections.json
 ```
 
 ## 2. Find unclassified movies
 
-The franchise cache lives at `data/franchise_cache.json` (create the `data/`
+The franchise cache lives at `cache/franchise_cache.json` (create the `cache/`
 dir and an empty `{}` file if it doesn't exist yet — do not delete or reset
 an existing cache).
 
 ```bash
-uv run plex-movie-sync-logic unclassified /tmp/plex-sync/movies.json data/franchise_cache.json
+uv run plex-movie-sync-logic unclassified /tmp/plex-sync/movies.json cache/franchise_cache.json
 ```
 
 This returns `{"unclassified": [...], "known_franchises": [...]}`. If
@@ -56,7 +56,7 @@ For each batch:
    interrupted):
 
    ```bash
-   uv run plex-movie-sync-logic merge-cache data/franchise_cache.json /tmp/plex-sync/batch-N.json
+   uv run plex-movie-sync-logic merge-cache cache/franchise_cache.json /tmp/plex-sync/batch-N.json
    ```
 4. Update your running known-franchise-name list from this batch's new
    franchise values before starting the next batch.
@@ -64,7 +64,7 @@ For each batch:
 ## 4. Compute the plan
 
 ```bash
-uv run plex-movie-sync-logic plan /tmp/plex-sync/movies.json /tmp/plex-sync/collections.json data/franchise_cache.json > /tmp/plex-sync/plan.json
+uv run plex-movie-sync-logic plan /tmp/plex-sync/movies.json /tmp/plex-sync/collections.json cache/franchise_cache.json > /tmp/plex-sync/plan.json
 ```
 
 This produces `{"creates": [...], "adds": [...], "removes": [...], "deletes": [...]}`:

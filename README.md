@@ -30,7 +30,7 @@ In Claude Code, run `/sync-movie-collections`. See
 `.claude/skills/sync-movie-collections/SKILL.md` for what it does: it snapshots
 your library, classifies any new movies into franchises (using the
 `movie-franchise-classifier` subagent — model knowledge + web search, cached in
-`data/franchise_cache.json` so repeat runs only classify new additions),
+`cache/franchise_cache.json` so repeat runs only classify new additions),
 shows you the create/add/remove/delete plan, and applies it after you
 confirm.
 
@@ -42,7 +42,7 @@ flow from an ordinary shell (no interactive session) using Claude Code's
 headless mode:
 
 ```bash
-cd /Users/samlunn/Code/Plex/plex-collection-manager
+cd /path/to/plex-collection-manager
 claude -p "/sync-movie-collections"
 ```
 
@@ -58,8 +58,8 @@ movies belong to which franchise:
 
 ```bash
 uv run plex-collection-manager movies
-uv run plex-collection-manager collections
-uv run plex-movie-sync-logic plan movies.json collections.json data/franchise_cache.json
+uv run plex-collection-manager movie-collections
+uv run plex-movie-sync-logic plan movies.json collections.json cache/franchise_cache.json
 ```
 
 ### Scheduling
@@ -86,7 +86,7 @@ snapshots your TV library, classifies any show that's never been checked
 (plus any currently "Ongoing" show, and any "Ended" show whose episode
 count has grown since it was classified — catching revivals/wrap-ups
 automatically) using the `tv-show-status-classifier` subagent, caches
-results in `data/tv_status_cache.json`, shows you the create/add/remove
+results in `cache/tv_status_cache.json`, shows you the create/add/remove
 plan (there's no delete step — this feature only ever touches its own 4
 collections and never removes a collection), and applies it after you
 confirm.
@@ -96,7 +96,7 @@ confirm.
 Same headless pattern as the movie sync:
 
 ```bash
-cd /Users/samlunn/Code/Plex/plex-collection-manager
+cd /path/to/plex-collection-manager
 claude -p "/sync-tv-collections"
 ```
 
@@ -106,7 +106,7 @@ The Plex-facing CLI and the TV-specific planning logic
 ```bash
 uv run plex-collection-manager shows
 uv run plex-collection-manager tv-collections
-uv run plex-tv-sync-logic plan shows.json collections.json data/tv_status_cache.json
+uv run plex-tv-sync-logic plan shows.json collections.json cache/tv_status_cache.json
 ```
 
 ### Scheduling

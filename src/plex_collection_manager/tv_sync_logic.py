@@ -68,12 +68,16 @@ def cmd_merge_cache(args: argparse.Namespace) -> None:
         category = entry["category"]
         if category not in CATEGORIES:
             raise ValueError(f"Unknown category {category!r} for show {entry.get('title')!r}")
+        reason = entry.get("reason")
+        if not reason:
+            raise ValueError(f"Missing reason for show {entry.get('title')!r}")
         key = str(entry["key"])
         show = shows_by_key.get(key)
         cache[key] = {
             "title": entry["title"],
             "year": entry.get("year"),
             "category": category,
+            "reason": reason,
             "leaf_count": show["leafCount"] if show else None,
         }
     save(args.cache, cache)
@@ -96,6 +100,15 @@ def cmd_plan(args: argparse.Namespace) -> None:
     creates = []
     adds = []
     removes = []
+    annotate = []
+
+    for s in shows:
+        entry = cache.get(str(s["key"]))
+        if entry is None:
+            continue
+        reason = entry.get("reason")
+        if reason and s.get("tagline", "") != reason:
+            annotate.append({"key": s["key"], "title": s["title"], "reason": reason})
 
     for category in CATEGORIES:
         keys = desired[category]
@@ -118,7 +131,7 @@ def cmd_plan(args: argparse.Namespace) -> None:
                 "show_key": k,
             })
 
-    plan = {"creates": creates, "adds": adds, "removes": removes}
+    plan = {"creates": creates, "adds": adds, "removes": removes, "annotate": annotate}
     print(json.dumps(plan, indent=2))
 
 

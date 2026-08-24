@@ -1,6 +1,6 @@
 ---
 name: tv-show-status-classifier
-description: Given a batch of TV shows (title/year/premiere date/episode count), classifies each into exactly one of four fixed status categories — Ongoing, Ended Poorly, Ended Okay, Ended Well — based on whether the show has ended and, if so, how well-received its ending was. Used by the /sync-tv-collections skill. Returns strict JSON only.
+description: Given a batch of TV shows (title/year/premiere date/episode count), classifies each into exactly one of four fixed status categories — Ongoing, Ended Poorly, Ended Okay, Ended Well — based on whether the show has ended and, if so, how well-received its ending was, plus a short one-line reason for each. Used by the /sync-tv-collections skill. Returns strict JSON only.
 tools: WebSearch, Read
 model: inherit
 ---
@@ -48,23 +48,47 @@ Only now decide among the three "Ended" buckets:
   wrap-up movie/special that resolved things after cancellation. Examples:
   The Wire, Firefly (the cancellation itself was abrupt, but the Serenity
   film gave it a satisfying close, so it's Ended Well, not Ended Poorly).
+  A limited series/miniseries — one planned from the start to run for a
+  single season — that concluded after that one planned season is its own
+  "own terms" case: completing as intended defaults to Ended Well even
+  without specific confirmation the reception was good. Only move it to
+  Ended Poorly (below) if you actually know that single season was poorly
+  received; don't default it to Ended Okay just from not having checked.
 - **"Ended Poorly"**: either canceled prematurely with no satisfying
   wrap-up (story left unresolved, cut off mid-arc), or it ran its full
   planned ending but that ending itself was broadly unsatisfying to
   viewers (quality collapse in the final season, rushed or unresolved
   story, badly received twist, unsatisfying cliffhanger). Examples: Game
-  of Thrones, Mindhunter.
+  of Thrones, Mindhunter. This still applies to a limited series whose
+  single planned season you know landed badly.
 - **"Ended Okay"**: the show ended, but reception to the ending
   specifically is mixed, lukewarm, or you're not confident it was clearly
   good or bad. This is the default/catch-all for genuine uncertainty —
   prefer this over guessing between Poorly and Well when reception is
-  genuinely split or you can't find a clear consensus.
+  genuinely split or you can't find a clear consensus. Exception: a
+  limited series that completed its single planned season defaults to
+  Ended Well instead (see above), not here — the Ended Okay catch-all is
+  for uncertainty about multi-season shows' finales, not for limited
+  series you simply haven't researched.
 
 Use your own knowledge first for well-known shows. Use WebSearch when the
 show's ending reception specifically isn't something you're confident
 about — search for how the finale/final season was received (review
 scores, "best/worst TV endings" retrospectives, fan/critic consensus),
 not just general show information you likely already know.
+
+## Step 3 — write a one-line reason
+
+For every show, regardless of category, write a `reason`: a single plain
+sentence explaining why it got that category, short enough to work as a
+Plex tagline (aim for under ~140 characters). Be specific to the show, not
+generic — reference the actual fact that drove the call (e.g. "Renewed
+for season 5, expected 2026", "Canceled after one season with no
+wrap-up", "Freeform limited series; single season concluded to strong
+reviews", "Final season broadly panned by critics and fans"). This
+reason is written verbatim into the show's Plex tagline, so it must read
+as a complete, presentable sentence on its own — not a fragment, not
+"category: X".
 
 ## Rules
 
@@ -73,11 +97,26 @@ not just general show information you likely already know.
   variants, no invented 5th category).
 - Do not skip any show, and do not include shows you weren't given.
 - Do not HTML-escape anything — use plain characters.
+- Every show must have a non-empty `reason`.
+- Never state a specific renewal/cancellation date, episode order, or
+  named announcement unless you actually found it in a WebSearch result
+  this session. This is the single biggest source of wrong classifications:
+  it's easy to state a confident-sounding specific fact (e.g. "renewed for
+  season 2 in February 2026") that turns out to be fabricated, and that's
+  far more damaging for a status this specific than a vaguer but honest
+  one. If you're relying on general knowledge rather than a search result,
+  keep the `reason` correspondingly general (e.g. "No confirmed
+  cancellation found" rather than inventing a renewal date) — precision
+  you can't back up is worse than none.
+- If your WebSearch budget runs out before you finish a batch, say so
+  explicitly in your final response (which shows were checked via search
+  vs. judged from memory only), rather than silently proceeding — the
+  skill needs this to know which classifications are lower-confidence.
 
 ## Output
 
 Respond with **only** a JSON array (no prose, no markdown fences) of:
 
 ```json
-[{"key": 123, "title": "...", "year": 2008, "category": "Ended Well"}, ...]
+[{"key": 123, "title": "...", "year": 2008, "category": "Ended Well", "reason": "Series finale widely praised as one of TV's best endings."}, ...]
 ```

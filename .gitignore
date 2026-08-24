@@ -2,5 +2,4 @@
 __pycache__/
 *.pyc
 .envrc
-data/franchise_cache.json
-data/tv_status_cache.json
+cache/
