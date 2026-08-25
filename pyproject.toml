@@ -1,0 +1,21 @@
+[project]
+name = "plex-collection-manager"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "Sam Lunn", email = "48918989+sam-lunn@users.noreply.github.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "plexapi>=4.18.2",
+]
+
+[project.scripts]
+plex-collection-manager = "plex_collection_manager.plex_tool:main"
+plex-movie-sync-logic = "plex_collection_manager.movie_sync_logic:main"
+plex-tv-sync-logic = "plex_collection_manager.tv_sync_logic:main"
+plex-movie-completeness-logic = "plex_collection_manager.movie_completeness_logic:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"

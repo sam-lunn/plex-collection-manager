@@ -1,1 +1,173 @@
 # plex-collection-manager
+
+Three Claude Code-driven Plex collection tools:
+
+- **Movies**: groups your movie library into collections by film
+  franchise/series (2+ owned entries), and removes any collection left
+  with only one item. Only ever touches the movie library section.
+- **Movie collection completeness**: checks every franchise collection
+  against its full canonical filmography and reports which films you're
+  missing from each. Read-only — never touches Plex beyond listing.
+- **TV shows**: sorts every show in your TV library into exactly 4 fixed
+  collections — Ongoing, Ended Poorly, Ended Okay, Ended Well — based on
+  whether it's ended and how well its ending was received. Only ever
+  touches those 4 collections; never deletes anything.
+
+## Setup
+
+```bash
+uv sync
+```
+
+Requires `PLEX_TOKEN` in `.envrc` (loaded via direnv) and a reachable Plex
+server (defaults to `http://192.168.1.7:32400`, override with
+`PLEX_BASE_URL`). Targets the movie library section named `Films` by
+default (override with `PLEX_LIBRARY_NAME`) and the TV library section
+named `TV Programmes` by default (override with `PLEX_TV_LIBRARY_NAME`).
+
+## Movie collections
+
+### Interactively
+
+In Claude Code, run `/sync-movie-collections`. See
+`.claude/skills/sync-movie-collections/SKILL.md` for what it does: it snapshots
+your library, classifies any new movies into franchises (using the
+`movie-franchise-classifier` subagent — model knowledge + web search, cached in
+`cache/franchise_cache.json` so repeat runs only classify new additions),
+shows you the create/add/remove/delete plan, and applies it after you
+confirm.
+
+### From the command line
+
+The classification step needs the model, so a full sync isn't a plain
+deterministic script — but you can still trigger the whole `/sync-movie-collections`
+flow from an ordinary shell (no interactive session) using Claude Code's
+headless mode:
+
+```bash
+cd /path/to/plex-collection-manager
+claude -p "/sync-movie-collections"
+```
+
+That runs non-interactively and prints the result. By default it will still
+pause to confirm before deleting or removing anything; add a permission mode
+flag (e.g. `--permission-mode acceptEdits`) if you want it to proceed through
+those without asking, such as when running from a script or cron.
+
+The Plex-facing CLI (`plex-collection-manager`) and the pure local planning
+logic (`plex-movie-sync-logic`) can also be run directly, without any AI step, for
+manual inspection or scripting — though on their own they don't know which
+movies belong to which franchise:
+
+```bash
+uv run plex-collection-manager movies
+uv run plex-collection-manager movie-collections
+uv run plex-movie-sync-logic plan movies.json collections.json cache/franchise_cache.json
+```
+
+### Scheduling
+
+To run the sync automatically on a recurring schedule (e.g. weekly), use
+Claude Code's `schedule` skill from within a session in this project:
+
+```
+/schedule
+```
+
+Follow its prompts to create a routine that runs `/sync-movie-collections` on
+whatever cadence you want (e.g. `claude -p "/sync-movie-collections"` on a
+weekly cron). It's not scheduled by default — this has to be set up
+explicitly.
+
+## Incomplete movie collections
+
+### Interactively
+
+In Claude Code, run `/find-incomplete-collections`. See
+`.claude/skills/find-incomplete-collections/SKILL.md` for what it does: it
+snapshots your movie collections, looks up the full canonical filmography
+for any franchise collection it hasn't checked before (using the
+`movie-collection-completeness-checker` subagent — model knowledge + web
+search, cached in `cache/franchise_completeness_cache.json` so repeat runs
+only research new franchise collections), then reports which owned
+collections are missing films — separating ones you could add right now
+from announced-but-unreleased entries. It's read-only: it never creates,
+edits, or deletes anything in Plex.
+
+Only collections whose title matches a known franchise name in
+`cache/franchise_cache.json` (i.e. ones `/sync-movie-collections` would
+recognize) are checked, since a meaningful "complete/incomplete" verdict
+needs a well-defined canonical membership.
+
+### From the command line
+
+```bash
+cd /path/to/plex-collection-manager
+claude -p "/find-incomplete-collections"
+```
+
+The Plex-facing CLI and the pure local diff logic
+(`plex-movie-completeness-logic`) can also be run directly, without any AI
+step, for manual inspection or scripting — though on their own they don't
+know a franchise's full filmography:
+
+```bash
+uv run plex-collection-manager movie-collections
+uv run plex-movie-completeness-logic to-check collections.json cache/franchise_cache.json cache/franchise_completeness_cache.json
+uv run plex-movie-completeness-logic report collections.json cache/franchise_completeness_cache.json
+```
+
+### Scheduling
+
+Same as the other two — use `/schedule` to register
+`/find-incomplete-collections` on whatever cadence you want. Not scheduled
+by default.
+
+## TV show status collections
+
+### Interactively
+
+In Claude Code, run `/sync-tv-collections`. See
+`.claude/skills/sync-tv-collections/SKILL.md` for what it does: it
+snapshots your TV library, classifies any show that's never been checked
+(plus any currently "Ongoing" show, and any "Ended" show whose episode
+count has grown since it was classified — catching revivals/wrap-ups
+automatically) using the `tv-show-status-classifier` subagent, caches
+results in `cache/tv_status_cache.json`, shows you the create/add/remove
+plan (there's no delete step — this feature only ever touches its own 4
+collections and never removes a collection), and applies it after you
+confirm.
+
+Cancellation/renewal status and finale reception are exactly the kind of
+facts that go stale in a model's training data, so the classifier is
+required to confirm every show with WebSearch rather than trust its own
+memory — if WebSearch isn't available in a session, it refuses to
+classify from memory and says so instead. In a shared WebSearch budget
+(e.g. several subagent batches in one session), a batch can still run out
+of search quota partway through; any show judged from memory in that
+situation gets flagged and recorded in `cache/tv_status_lowconfidence.json`
+so it can be re-checked later with a fresh budget, rather than being
+silently treated as equally trustworthy as a search-verified result.
+
+### From the command line
+
+Same headless pattern as the movie sync:
+
+```bash
+cd /path/to/plex-collection-manager
+claude -p "/sync-tv-collections"
+```
+
+The Plex-facing CLI and the TV-specific planning logic
+(`plex-tv-sync-logic`) can also be run directly, without any AI step:
+
+```bash
+uv run plex-collection-manager shows
+uv run plex-collection-manager tv-collections
+uv run plex-tv-sync-logic plan shows.json collections.json cache/tv_status_cache.json
+```
+
+### Scheduling
+
+Same as movies — use `/schedule` to register `/sync-tv-collections` on
+whatever cadence you want. Not scheduled by default.
